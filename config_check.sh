@@ -21,7 +21,7 @@ curent_host="global"
 
 
 while read -r line || [ -n "$line" ]; do
-	if [[ -z "$line" || "$line"==\#* ]]; then
+	if [[ -z "$line" || "$line" == \#* ]]; then
 		continue
 	fi
 
@@ -39,7 +39,7 @@ while read -r line || [ -n "$line" ]; do
 	cheie_dictionar="${curent_host}_${cheie}"
 
 	if [[ -n "${dictionar[$cheie_dictionar]}" ]]; then
-		echo "DUPLICAT la host-ul $curent_host, optiunea $cheie e deja setata"
+		echo "DUPLICAT: la host-ul $curent_host, optiunea $cheie e deja setata"
 	else
 		dictionar["$cheie_dictionar"]="$valoare"
 
