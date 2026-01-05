@@ -98,6 +98,47 @@ while read -r linie || [ -n "$linie" ]; do
 done < "$file" 
 
 
+
+declare -A recomandari
+recomandari["PermitRootLogin"]="no"
+recomandari["PasswordAuthentication"]="no"
+recomandari["PermitEmptyPasswords"]="no"
+recomandari["MaxAuthTries"]="3"
+recomandari["X11Forwarding"]="no"
+
+
+printf "%s\n" "${!recomandari[@]}" | while read -r i; do
+	if [[ -z "$i" ]]; then
+		 continue
+	fi
+
+         valoare_ideala=${recomandari[$i]}
+    
+    
+         valoare_curenta=${dictionar["global_$i"]}
+    
+         if [[ -n "$valoare_curenta" ]]; then
+         if [[ "$valoare_curenta" != "$valoare_ideala" ]]; then
+         	 echo " '$i' are  valoarea '$valoare_curenta', trebuie schimbata in '$valoare_ideala'!"
+         fi
+         else
+		linie_comentata=$(grep "#$i" "$file" | head -n 1)
+		valoare_comentata=$(echo "$linie_comentata" | awk '{print $2}')
+        
+                if [[ -n "$valoare_comentata" ]]; then
+               		 if [[ "$valoare_comentata" != "$valoare_ideala" ]]; then
+                          	 echo "atentie '$i' este comentata cu valoarea '$valoare_comentata', valoarea default a sistemului este nesigura, se recomanda '$i $valoare_ideala' "
+               		 else
+               			 echo " '$i' este comentata, dar are valoarea default sigura '$valoare_comentata' "
+               		 fi
+                else
+           		 echo "lipseste '$i' nu apare deloc, se recomanda adaugarea liniei '$i $valoare_ideala' "
+                fi
+         fi
+done 
+
+
+
 for cheie_compusa in "${!dictionar[@]}"; do
     echo   "$cheie_compusa - ${dictionar[$cheie_compusa]}"
 done 
