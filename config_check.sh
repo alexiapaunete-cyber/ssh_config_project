@@ -11,26 +11,22 @@ fi
 
 
 if [[ ! -f "$file" ]]; then
-	echo "fisierul '$file' nu exista"
+	echo "eroare: fisierul '$file' nu exista"
 	exit 1
 fi
 
-
-
-if grep -qi "PermitRootLogin yes" "$file"; then
-	echo "PERICOL:  root login este activat"
-else
-	echo "root login este dezactivat sau neschimbat"
-fi
-
-
 permisiuni=$(stat -c  "%a" "$file")
 if [ "$permisiuni" -ne 600 ] && [ "$permisiuni" -ne 644 ]; then
- 	echo "Permisiuni nesigure, se recomanda: 600"
+ 	echo "permisiuni nesigure, se recomanda: 600"
+fi
+
+proprietar=$(stat -c "%U" "$file")
+if [ "$proprietar" != "root" ]; then
+	echo -e "fisierul nu este detinut de root! propprietar actual: $proprietar"
 fi
 
 declare -A dictionar
-curent_host="global"
+match_curent="global"
 
 
 
@@ -45,45 +41,53 @@ while read -r linie || [ -n "$linie" ]; do
 	linie=$(echo "$linie" | xargs)
 
 
-	if [[ "$linie" == Host\ * ]]; then
-        	curent_host=$(echo "$linie" | awk '{print $2}')
+	if [[ "$linie" == Match\ * ]]; then
+        	match_curent=$(echo "$linie")
         	continue
     	fi
 
-
-   	 
-    	cheie=$(echo "$linie" | awk '{print $1}')       #cheie=hostname
-    	valoare=$(echo "$linie" | awk '{print $2}')     #valoare = 4
-    	cheie_dictionar="${curent_host}_${cheie}"      # cheia_ dictionar = alexia_hostname
+    	cheie=$(echo "$linie" | awk '{print $1}')    
+    	valoare=$(echo "$linie" | awk '{print $2}')     
+    	cheie_dictionar="${match_curent}_${cheie}"      
 
     
     if [[ -n "${dictionar[$cheie_dictionar]}" ]]; then
-        echo "[DUPLICAT] La host-ul $curent_host, opțiunea $cheie este deja setată!"
+        echo "[DUPLICAT] in sectiunea '$match_curent', optiunea '$cheie' apare de mai multe ori!"
     else
         
         dictionar["$cheie_dictionar"]="$valoare"
 
 	case "$cheie" in
 		"PermitRootLogin")
-         		if [[ "$valoare" == "yes" ]]; then
-				echo "host: $curent_host -> root login este activat"
+         		if [[ "$valoare" != "no" ]]; then
+				echo "$match_curent: PermitRootLogin este '$valoare', se recomanda 'no'  "
 			fi
 			;;
 		"PasswordAuthentication")
-			if [[ "$valoare" == "yes" ]]; then
-                        	 echo "host: $curent_host -> permite parole; recomandat: 'no' (folositi chei)"
+			if [[ "$valoare" != "no" ]]; then
+                        	 echo " $match_curent: permite parole, recomandat: 'no' (folositi chei ssh)"
 			fi
                         ;;
 		"PermitEmptyPasswords")
-			if [[ "$valoare" == "yes" ]]; then
-        	                 echo "host: $curent_host -> permite parole goale"
+			if [[ "$valoare" != "no" ]]; then
+        	                 echo "$match_curent: permite parole goale"
                	        fi
           	    	;;
 		"Port")
-			if [[ "$valoare" == "yes" ]]; then
-               	                echo "host: $curent_host -> foloseste portul standard 22"
+			if [[ "$valoare" == "22" ]]; then
+               	                echo " $match_curent -> foloseste portul standard 22, schimbati-l pentru a reduce atacurile bot "
                	        fi
                	        ;;
+		"X11Forwarding")
+			if [[ "$valoare" != "no" ]]; then
+				echo " X11Forwarding este activat, daca nu folositi aplicatii grafice se recomanda dezactivarea sa"
+			fi
+			;;
+		"MaxAuthTries")
+			if [ "$valoare" -gt 3 ]; then
+				echo "MaxAuthTries este "$valoare", este recomandat sa fie <=3"
+			fi
+			;;
 	esac
 
 
